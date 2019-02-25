@@ -140,11 +140,12 @@ def frange(start,stop,step):
         i += step
         
 def glLine(x0,y0,x1,y1,step):
+    #step = diferencia en decimales/diferencia de enteros
     global deltax,deltay,m
     
     deltax = abs(x1 - x0)
     deltay = abs(y1 - y0)
-    m = abs(deltay/deltax)
+    #m = abs(deltay/deltax)
     error = 0
     threshold = deltax
     y = y0
@@ -158,13 +159,14 @@ def glLine(x0,y0,x1,y1,step):
         #step = 1/(my_bitmap.height/2)
         y = y0
     for x in frange(x0,x1,step):
+        #print(x,y)
         if(deltay > deltax):
             glVertex(float(y),float(x))
         else:
             glVertex(float(x),float(y))
         error += deltay * 2
         if error >= threshold:
-            y += deltay if y0 < y1 else -deltay
+            y += 1/my_bitmap.width/2 if y0 < y1 else -1/my_bitmap.width/2
             threshold += deltax * 2
             
 
