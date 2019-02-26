@@ -1,8 +1,8 @@
-
 import struct
 import math
 import sys
 import random
+from obj import Obj
 #uso numpy para la funcion sign y los steps de float en la linea
 
 def char(c):
@@ -168,8 +168,34 @@ def glLine(x0,y0,x1,y1,step):
         if error >= threshold:
             y += 1/my_bitmap.width/2 if y0 < y1 else -1/my_bitmap.width/2
             threshold += deltax * 2
-            
 
+#obj
+def glLoad(filename,translate=(0,0),scale=(1,1)):
+    global my_bitmap
+    model = Obj(filename)
+    for face in model.vfaces:
+        vcount = len(face)
+        #print(vcount)
+        for j in range(vcount):
+            f1 = face[j][0]
+            f2 = face[(j+1)%vcount][0]
+
+            v1 = model.vertices[f1-1]
+            v2 = model.vertices[f2-1]
+            scaleX,scaleY = scale
+            translateX,translateY = translate
+
+            x1 = round((v1[0] + translateX) * scaleX)
+            x1 = round(x1/(my_bitmap.width/2),2)
+            y1 = round((v1[1] + translateY) * scaleY)
+            y1 = round(y1/(my_bitmap.height/2),2)
+            x2 = round((v2[0] + translateX) * scaleX)
+            x2 = round(x2/(my_bitmap.width/2),2)
+            y2 = round((v2[1] + translateY) * scaleY)
+            y2 = round(y2/(my_bitmap.height/2),2)
+            #print(x1,x2,y1,y2)
+
+            glLine(x1,y1,x2,y2,0.004)
 def glFinish(name):
     global my_bitmap
     my_bitmap.write(str(name)+".bmp")

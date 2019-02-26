@@ -30,26 +30,26 @@ x2 = 207
 y1 = 330
 y2 = 345
 estandarizar()
-#gl.glLine(x1,y1,x2,y2,0.00015)
+gl.glLine(x1,y1,x2,y2,0.004)
 #3er par
 x1 = 233
 x2 = 230
 y1 = 330
 y2 = 360
 estandarizar()
-#gl.glLine(x1,y1,x2,y2,0.002)
+gl.glLine(x1,y1,x2,y2,0.004)
 #4to par
 x1 = 250
 x2 = 220
 y1 = 380
 y2 = 385
 estandarizar()
-#gl.glLine(x1,y1,x2,y2)
+gl.glLine(x1,y1,x2,y2,0.004)
 #5to par
 x1 = 205
 x2 = 193
 y1 = 410
 y2 = 383
 estandarizar()
-#gl.glLine(x1,y1,x2,y2)
+gl.glLine(x1,y1,x2,y2,0.0041)
 gl.glFinish("Lab1")
