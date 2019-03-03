@@ -3,7 +3,49 @@ import math
 import sys
 import random
 from obj import Obj
-#uso numpy para la funcion sign y los steps de float en la linea
+from collections import namedtuple
+
+V2 = namedtuple('Point2', ['x', 'y'])
+V3 = namedtuple('Point3', ['x', 'y', 'z'])
+
+
+def sum(v0, v1):
+  return V3(v0.x + v1.x, v0.y + v1.y, v0.z + v1.z)
+
+def sub(v0, v1):
+  return V3(v0.x - v1.x, v0.y - v1.y, v0.z - v1.z)
+
+def mul(v0, k):
+  return V3(v0.x * k, v0.y * k, v0.z *k)
+
+def dot(v0, v1):
+  return v0.x * v1.x + v0.y * v1.y + v0.z * v1.z
+
+def cross(v0, v1):
+  return V3(
+    v0.y * v1.z - v0.z * v1.y,
+    v0.z * v1.x - v0.x * v1.z,
+    v0.x * v1.y - v0.y * v1.x,
+  )
+
+def length(v0):
+  return (v0.x**2 + v0.y**2 + v0.z**2)**0.5
+
+def norm(v0):
+  v0length = length(v0)
+
+  if not v0length:
+    return V3(0, 0, 0)
+
+  return V3(v0.x/v0length, v0.y/v0length, v0.z/v0length)
+
+def bbox(*vertices):
+  xs = [ vertex.x for vertex in vertices ]
+  ys = [ vertex.y for vertex in vertices ]
+  xs.sort()
+  ys.sort()
+
+  return V2(xs[0], ys[0]), V2(xs[-1], ys[-1])
 
 def char(c):
     return struct.pack("=c",c)
@@ -143,8 +185,8 @@ def glLine(x0,y0,x1,y1,step):
     #step = diferencia en decimales/diferencia de enteros
     global deltax,deltay,m
     
-    deltax = abs(x1 - x0)
-    deltay = abs(y1 - y0)
+    deltax = round(abs(x1 - x0),2)
+    deltay = round(abs(y1 - y0),2)
     #m = abs(deltay/deltax)
     error = 0
     threshold = deltax
@@ -158,16 +200,76 @@ def glLine(x0,y0,x1,y1,step):
         y0,y1 = y1,y0
         #step = 1/(my_bitmap.height/2)
         y = y0
-    for x in frange(x0,x1,step):
+    for x in frange(x0,x1+(1/(my_bitmap.width/2)),step):
         #print(x,y)
         if(deltay > deltax):
+            print(deltax)
+            print(deltay)
             glVertex(float(y),float(x))
         else:
             glVertex(float(x),float(y))
         error += deltay * 2
         if error >= threshold:
-            y += 1/my_bitmap.width/2 if y0 < y1 else -1/my_bitmap.width/2
+            y += 2.5/my_bitmap.width/4 if y0 < y1 else -2.5/my_bitmap.width/4
             threshold += deltax * 2
+
+def triangle(self, A, B, C, color=None):
+    if A.y > B.y:
+      A, B = B, A
+    if A.y > C.y:
+      A, C = C, A
+    if B.y > C.y: 
+      B, C = C, B
+
+    dx_ac = C.x - A.x
+    dy_ac = C.y - A.y
+    if dy_ac == 0:
+        return
+    mi_ac = dx_ac/dy_ac
+
+    dx_ab = B.x - A.x
+    dy_ab = B.y - A.y
+    if dy_ab != 0:
+        mi_ab = dx_ab/dy_ab
+
+        for y in range(A.y, B.y + 1):
+            xi = round(A.x - mi_ac * (A.y - y))
+            xf = round(A.x - mi_ab * (A.y - y))
+
+            if xi > xf:
+                xi, xf = xf, xi
+            for x in range(xi, xf + 1):
+                x = estandarizarx(x)
+                y = estandarizary(y)
+                self.point(x, y, color)
+
+    dx_bc = C.x - B.x
+    dy_bc = C.y - B.y
+    if dy_bc:
+        mi_bc = dx_bc/dy_bc
+
+        # dacx = C.x - A.x
+        # dacy = C.y - A.y
+        # miac = dacx/dacy  // we have mi_ac already!
+
+        for y in range(B.y, C.y + 1):
+            xi = round(A.x - mi_ac * (A.y - y))
+            xf = round(B.x - mi_bc * (B.y - y))
+
+            if xi > xf:
+                xi, xf = xf, xi
+            for x in range(xi, xf + 1):
+                x = estandarizarx(x)
+                y = estandarizary(y)
+                self.point(x, y, color)
+
+def transform(self, vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
+    # returns a vertex 3, translated and transformed
+    return V3(
+      round((vertex[0] + translate[0]) * scale[0]),
+      round((vertex[1] + translate[1]) * scale[1]),
+      round((vertex[2] + translate[2]) * scale[2])
+    )
 
 #obj
 def glLoad(filename,translate=(0,0),scale=(1,1)):
