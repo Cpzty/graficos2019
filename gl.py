@@ -1,7 +1,5 @@
 import struct
 import math
-import sys
-import random
 from obj import Obj
 from collections import namedtuple
 
@@ -204,37 +202,131 @@ def frange(start,stop,step):
         yield i
         i += step
         
-def glLine(x0,y0,x1,y1,step):
-    #step = diferencia en decimales/diferencia de enteros
-    global deltax,deltay,m
+##def glLine(x0,y0,x1,y1,step):
+##    #step = diferencia en decimales/diferencia de enteros
+##    global deltax,deltay,m
+##    
+##    deltax = round(abs(x1 - x0),2)
+##    deltay = round(abs(y1 - y0),2)
+##    #m = abs(deltay/deltax)
+##    error = 0
+##    threshold = deltax
+##    y = y0
+##    #step = 1/(my_bitmap.width/2)
+##    if(deltay > deltax):
+##        x0,y0 = y0,x0
+##        x1,y1 = y1,x1
+##    if(x0>x1):
+##        x0,x1 = x1,x0
+##        y0,y1 = y1,y0
+##        #step = 1/(my_bitmap.height/2)
+##        y = y0
+##    for x in frange(x0,x1+(1/(my_bitmap.width/2)),step):
+##        #print(x,y)
+##        if(deltay > deltax):
+##            #print(deltax)
+##            #print(deltay)
+##            glVertex(float(y),float(x))
+##        else:
+##            glVertex(float(x),float(y))
+##        error += deltay * 2
+##        if error >= threshold:
+##            y += 2.5/my_bitmap.width/4 if y0 < y1 else -2.5/my_bitmap.width/4
+##            threshold += deltax * 2
+
+def glLineLow(x0,y0,x1,y1,step):
+  dx = round(x1 - x0,2)
+  dy = round(y1 - y0,2)
+  yi = (1/my_bitmap.height/2)
+  if dy < 0:
+    yi = -(1/my_bitmap.height/2)
+    dy = -dy
+  threshold = (2*dy) - dx
+  y = y0
+  for x in frange(x0,x1+(1/(my_bitmap.width/2)),step):
+    glVertex(float(x),float(y))
+    if threshold > 0:
+        y = y + yi
+        threshold = threshold - (2 * dx)
+    threshold = threshold + (2 * dy)
+
+def glLineHigh(x0,y0,x1,y1,step):
+    dx = round(x1 - x0,2)
+    dy = round(y1 - y0,2)
+    xi = (1/my_bitmap.width/2)
+    if dx < 0:
+        xi = -(1/my_bitmap.width/2)
+        dx = -dx
+    threshold = (2 *dx) - dy
+    x = x0
+    for y in frange(y0,y1+(1/(my_bitmap.height/2)),step):
+        glVertex(x,y)
+        if threshold > 0:
+            x = x + xi
+            threshold = threshold - (2*dy)
+        threshold = threshold + (2 * dx)
     
-    deltax = round(abs(x1 - x0),2)
-    deltay = round(abs(y1 - y0),2)
-    #m = abs(deltay/deltax)
-    error = 0
-    threshold = deltax
-    y = y0
-    #step = 1/(my_bitmap.width/2)
-    if(deltay > deltax):
-        x0,y0 = y0,x0
-        x1,y1 = y1,x1
-    if(x0>x1):
-        x0,x1 = x1,x0
-        y0,y1 = y1,y0
-        #step = 1/(my_bitmap.height/2)
-        y = y0
-    for x in frange(x0,x1+(1/(my_bitmap.width/2)),step):
-        #print(x,y)
-        if(deltay > deltax):
-            #print(deltax)
-            #print(deltay)
-            glVertex(float(y),float(x))
+#def glLineBresenham(x0,y0,x1,y1,step):
+#    if abs(y1-y0) < abs(x1-x0):
+#        if x0 > x1:
+#            glLineLow(x1,y1,x0,y0,step)
+#        else:
+#            glLineLow(x0,y0,x1,y1,step)
+#    else:
+#        if y0 > y1:
+#            glLineHigh(x1,y1,x0,y0,step)
+#        else:
+#            glLineHigh(x0,y0,x1,y1,step)
+
+def glLineLow_norm(x0,y0,x1,y1):
+  dx = round(x1 - x0,2)
+  dy = round(y1 - y0,2)
+  yi = 1
+  if dy < 0:
+    yi = -1
+    dy = -dy
+  threshold = (2*dy) - dx
+  y = y0
+  for x in range(x0,x1+1):
+    xs = estandarizarx(x)
+    ys = estandarizary(y)
+    glVertex(xs,ys)
+    if threshold > 0:
+        y = y + yi
+        threshold = threshold - (2 * dx)
+    threshold = threshold + (2 * dy)
+
+def glLineHigh_norm(x0,y0,x1,y1):
+    dx = round(x1 - x0,2)
+    dy = round(y1 - y0,2)
+    xi = 1
+    if dx < 0:
+        xi = -1
+        dx = -dx
+    threshold = (2 *dx) - dy
+    x = x0
+    for y in range(y0,y1+1):
+        xs = estandarizarx(x)
+        ys = estandarizary(y)
+        glVertex(xs,ys)
+        if threshold > 0:
+            x = x + xi
+            threshold = threshold - (2*dy)
+        threshold = threshold + (2 * dx)
+    
+def glLineBresenham(x0,y0,x1,y1):
+    if abs(y1-y0) < abs(x1-x0):
+        if x0 > x1:
+            glLineLow_norm(x1,y1,x0,y0)
         else:
-            glVertex(float(x),float(y))
-        error += deltay * 2
-        if error >= threshold:
-            y += 2.5/my_bitmap.width/4 if y0 < y1 else -2.5/my_bitmap.width/4
-            threshold += deltax * 2
+            glLineLow_norm(x0,y0,x1,y1)
+    else:
+        if y0 > y1:
+            glLineHigh_norm(x1,y1,x0,y0)
+        else:
+            glLineHigh_norm(x0,y0,x1,y1)
+            
+            
 
 def triangle(A, B, C, color=None):
     if A.y > B.y:
