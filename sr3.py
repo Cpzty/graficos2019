@@ -1,4 +1,8 @@
 import gl
+import time as t
 gl.glCreateWindow(400,400)
-gl.glLoad("./robot.obj",(0.5,0.5),(100,100))
-gl.glFinish('robot')
+start = t.time()
+gl.glLoad("./cube.obj",(0.4,0.3,0.3),(100,100,0.5))
+gl.glFinish('cube')
+finish = t.time()
+print("took: {}".format(finish-start))

@@ -2,6 +2,9 @@
 #carnet 16011
 ####
 import gl
+import sys
+sys.setrecursionlimit(4000)
+print(sys.getrecursionlimit())
 ####
 gl.glCreateWindow(500,500)
 x1 = y1 = x2 = y2 = 0
@@ -88,6 +91,7 @@ x2 = 165
 y2 = 380
 estandarizar()
 gl.glLine(x1,y1,x2,y2,0.004)
-
-
+#gl.glVertex(-0.2,0.5)
+#gl.flood_fill(-0.2,0.5,0,0.64, b'\x00\x00\x00',-0.34,0.32)
+gl.bucketfill(-0.34,0.32,0,0.64)
 gl.glFinish("Lab1")
