@@ -3,8 +3,8 @@
 ####
 import gl
 import sys
-sys.setrecursionlimit(4000)
-print(sys.getrecursionlimit())
+#sys.setrecursionlimit(4000)
+#print(sys.getrecursionlimit())
 ####
 gl.glCreateWindow(500,500)
 x1 = y1 = x2 = y2 = 0
@@ -101,37 +101,35 @@ y2 = 380
 gl.glLineBresenham(x1,y1,x2,y2)
 #gl.glLine(x1,y1,x2,y2,0.004)
 #gl.glVertex(-0.2,0.5)
-#gl.flood_fill(-0.2,0.5,0,0.64, b'\x00\x00\x00',-0.34,0.32)
-#gl.bucketfill(-0.34,0.32,0,0.64)
+#gl.flood_fill(200,370,250,410, b'\x00\x00\x00',165,330)
+gl.bucketfill(-0.34,0.32,0,0.64)
 
 #poligono2
 x1 = 321
 y1 = 335
 x2 = 288
 y2 = 286
-estandarizar()
-#gl.glLine(x1,y1,x2,y2,0.004)
+gl.glLineBresenham(x1,y1,x2,y2)
 #2
 x1 = 288
 y1 = 286
 x2 = 339
 y2 = 251
-estandarizar()
-#gl.glLine(x1,y1,x2,y2,0.004)
+gl.glLineBresenham(x1,y1,x2,y2)
 #3
 x1 = 339
 y1 = 251
 x2 = 374
 y2 = 302
-estandarizar()
-#gl.glLine(x2,y2,x1,y1,0.004)
+gl.glLineBresenham(x1,y1,x2,y2)
 #4
 x1 = 374
 y1 = 302
 x2 = 321
 y2 = 335
-estandarizar()
-#gl.glLine(x1,y1,x2,y2,0.004)
+gl.glLineBresenham(x1,y1,x2,y2)
+gl.flood_fill(320,300,374,335, b'\xff\xff\xff',288,251)
+
 #figura3
 x1 = 377
 y1 = 249

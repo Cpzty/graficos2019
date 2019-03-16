@@ -481,18 +481,21 @@ def glFinish(name):
 
 def flood_fill(x,y,maxx,maxy,initial_color,minx,miny):
   global my_bitmap
+  xs = estandarizarx(x)
+  ys = estandarizary(y)
+  print(x)
   if(x>=maxx or y >=maxy):
     return
   if(x<=minx or y <=miny):
     return
-  if my_bitmap.pixels[round(x*(my_bitmap.width/2)+1)][round(y*(my_bitmap.width/2)+1)] != initial_color:
+  elif(b'\xff\xff\xff' == my_bitmap.pixels[round(xs*250+1)][round(ys*250+1)]):
     return
-  glColor(0,0,1)
-  glVertex(x,y)
-  flood_fill(x + 46/(my_bitmap.width/2), y,maxx,maxy,initial_color,minx,miny) 
-  flood_fill(x - 46/(my_bitmap.width/2), y,maxx,maxy,initial_color,minx,miny) 
-  flood_fill(x, y + 46/(my_bitmap.height/2),maxx,maxy,initial_color,minx,miny) 
-  flood_fill(x, y - 46/(my_bitmap.height/2),maxx,maxy,initial_color,minx,miny) 
+  else:
+    glVertex(xs,ys)
+    flood_fill(x + 1, y,maxx,maxy,initial_color,minx,miny) 
+    flood_fill(x - 1, y,maxx,maxy,initial_color,minx,miny) 
+    flood_fill(x, y + 1,maxx,maxy,initial_color,minx,miny) 
+    flood_fill(x, y - 1,maxx,maxy,initial_color,minx,miny) 
 
 def bucketfill(x,y,maxx,maxy):
   x1 = x
