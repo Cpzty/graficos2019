@@ -1,3 +1,9 @@
+def test_for_int(s,base=10,val=None):
+    try:
+        return int(s,base)
+    except ValueError:
+        return val
+
 class Obj(object):
     def __init__(self,filename):
         with open(filename) as f:
@@ -12,5 +18,8 @@ class Obj(object):
                 if prefix == 'v':
                     self.vertices.append(list(map(float,value.split(' '))))
                 elif prefix == 'f':
-                    self.vfaces.append([list(map(int,face.split('/'))) for face in value.split(' ')])
-            
+                    self.vfaces.append([list(map(test_for_int,face.split('/'))) for face in value.split(' ')])
+                    #print(self.vfaces)
+                    #for face in self.vfaces:
+                     #   vcount = len(face)
+                      #  print(vcount)

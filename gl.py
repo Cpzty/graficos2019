@@ -87,6 +87,10 @@ class Bitmap(object):
                 bmp_color for x in range(self.width)
                 ] for y in range(self.height)
             ]
+        self.zbuffer = [
+            [-float('inf') for x in range(self.width)]
+            for y in range(self.height)
+        ]
     def write(self, filename):
         f = open(filename, "bw")
         #header
@@ -328,72 +332,74 @@ def glLineBresenham(x0,y0,x1,y1):
             
             
 
-def triangle(A, B, C, color=None):
-    if A.y > B.y:
-      A, B = B, A
-    if A.y > C.y:
-      A, C = C, A
-    if B.y > C.y: 
-      B, C = C, B
-
-    dx_ac = C.x - A.x
-    dy_ac = C.y - A.y
-    if dy_ac == 0:
-        return
-    mi_ac = dx_ac/dy_ac
-
-    dx_ab = B.x - A.x
-    dy_ab = B.y - A.y
-    if dy_ab != 0:
-        mi_ab = dx_ab/dy_ab
-
-        for y in range(A.y, B.y + 1):
-            xi = round(A.x - mi_ac * (A.y - y))
-            xf = round(A.x - mi_ab * (A.y - y))
-
-            if xi > xf:
-                xi, xf = xf, xi
-            for x in range(xi, xf + 1):
-                #print(x)
-                #print(y)
-                x = estandarizarx(x)
-                y = estandarizary(y)
-                glColor(1,0,0)
-                glVertex(x, y)
-
-    dx_bc = C.x - B.x
-    dy_bc = C.y - B.y
-    if dy_bc:
-        mi_bc = dx_bc/dy_bc
-
-
-        for y in range(B.y, C.y + 1):
-            xi = round(A.x - mi_ac * (A.y - y))
-            xf = round(B.x - mi_bc * (B.y - y))
-
-            if xi > xf:
-                xi, xf = xf, xi
-            for x in range(xi, xf + 1):
-                x = estandarizarx(x)
-                y = estandarizary(y)
-                glColor(1,0,0)
-                glVertex(x, y)
+#def triangle(A, B, C, color=None):
+#    if A.y > B.y:
+#      A, B = B, A
+#    if A.y > C.y:
+#      A, C = C, A
+#    if B.y > C.y: 
+#      B, C = C, B
+#
+#    dx_ac = C.x - A.x
+#    dy_ac = C.y - A.y
+#    if dy_ac == 0:
+#        return
+#    mi_ac = dx_ac/dy_ac
+#
+#    dx_ab = B.x - A.x
+#    dy_ab = B.y - A.y
+#    if dy_ab != 0:
+#        mi_ab = dx_ab/dy_ab
+#
+#        for y in range(A.y, B.y + 1):
+#            xi = round(A.x - mi_ac * (A.y - y))
+#            xf = round(A.x - mi_ab * (A.y - y))
+#
+#            if xi > xf:
+#                xi, xf = xf, xi
+#            for x in range(xi, xf + 1):
+#                #print(x)
+#                #print(y)
+#                x = estandarizarx(x)
+#                y = estandarizary(y)
+#                glColor(1,0,0)
+#                glVertex(x, y)
+#
+#    dx_bc = C.x - B.x
+#    dy_bc = C.y - B.y
+#    if dy_bc:
+#        mi_bc = dx_bc/dy_bc
+#
+#
+#        for y in range(B.y, C.y + 1):
+#            xi = round(A.x - mi_ac * (A.y - y))
+#            xf = round(B.x - mi_bc * (B.y - y))
+#
+#            if xi > xf:
+#                xi, xf = xf, xi
+#            for x in range(xi, xf + 1):
+#                x = estandarizarx(x)
+#                y = estandarizary(y)
+#                glColor(1,0,0)
+#                glVertex(x, y)
       
-##def triangle(A, B, C, color=None):
-##    bbox_min, bbox_max = bbox(A, B, C)
-##    for x in range(bbox_min.x, bbox_max.x + 1):
-##      for y in range(bbox_min.y, bbox_max.y + 1):
-##        w, v, u = barycentric(A, B, C, V2(x, y))
-##        if w < 0 or v < 0 or u < 0: 
-##          continue
-##        x = estandarizarx(x)
-##        y = estandarizary(y)
-##        glVertex(x, y)
+def triangle(A, B, C, color=None):
+    global my_bitmap
+    bbox_min, bbox_max = bbox(A, B, C)
+    for x in range(bbox_min.x, bbox_max.x + 1):
+      for y in range(bbox_min.y, bbox_max.y + 1):
+        w, v, u = barycentric(A, B, C, V2(x, y))
+        if w < 0 or v < 0 or u < 0: 
+          continue
+        z = A.z * w + B.z * v + C.z * u
+        if z > my_bitmap.zbuffer[x][y]:
+            xs = estandarizarx(x)
+            ys = estandarizary(y)
+            glVertex(x-0.1, y-0.1)
+            my_bitmap.zbuffer[x][y] = z
 
 def glTransform(vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
-    print(vertex)
-    print(translate)
-    print(scale)
+
     return V3(
       round((vertex[0] + translate[0]) * scale[0]),
       round((vertex[1] + translate[1]) * scale[1]),
@@ -404,10 +410,9 @@ def glTransform(vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
 def glLoad(filename,translate=(0,0,0),scale=(1,1,1)):
     global my_bitmap
     model = Obj(filename)
-    light = V3(0,0,1)
+    light = V3(0,1,0)
     for face in model.vfaces:
         vcount = len(face)
-        print(vcount)
         if vcount == 3:
             f1 = face[0][0] - 1
             f2 = face[1][0] - 1
@@ -424,12 +429,15 @@ def glLoad(filename,translate=(0,0,0),scale=(1,1,1)):
                 continue  
             triangle(a, b, c, color(grey, grey, grey))
         else:
-            #print(face)
             f1 = face[0][0] - 1
+            #print(f1)
             f2 = face[1][0] - 1
+            #print(f2)
             f3 = face[2][0] - 1
+            #print(f3)
             f4 = face[3][0] - 1   
-
+            #print(f4)
+            #print(model.vertices[f1])
             vertices = [
                 glTransform(model.vertices[f1], translate, scale),
                 glTransform(model.vertices[f2], translate, scale),
@@ -443,7 +451,6 @@ def glLoad(filename,translate=(0,0,0),scale=(1,1,1)):
             if grey < 0:
                 continue 
             A, B, C, D = vertices 
-        
             triangle(A, B, C, color(grey, grey, grey))
             triangle(A, C, D, color(grey, grey, grey))
 
