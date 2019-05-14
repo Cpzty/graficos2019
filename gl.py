@@ -1,5 +1,7 @@
 import struct
 import math
+import random
+import numpy as np
 from obj import Obj,Texture
 from collections import namedtuple
 
@@ -47,17 +49,24 @@ def bbox(*vertices):
 
 def barycentric(A, B, C, P):
   bary = cross(
-    V3(C.x - A.x, B.x - A.x, A.x - P.x), 
+    V3(C.x - A.x, B.x - A.x, A.x - P.x),
     V3(C.y - A.y, B.y - A.y, A.y - P.y)
   )
   if abs(bary[2]) < 1:
-    return -1, -1, -1   
+    return -1, -1, -1
 
   return (
-    1 - (bary[0] + bary[1]) / bary[2], 
-    bary[1] / bary[2], 
+    1 - (bary[0] + bary[1]) / bary[2],
+    bary[1] / bary[2],
     bary[0] / bary[2]
   )
+
+def ndc(point):
+  point = V3(*point)
+  px = point.x / point.z
+  py = point.y / point.z
+  pz = point.z / point.z
+  return V3(px,py,pz)
 
 
 def char(c):
@@ -81,6 +90,9 @@ class Bitmap(object):
         self.height = height
         self.pixelf = []
         self.clear()
+        self.shader = None
+        self.texture = None
+        self.normalmap = None
     def clear(self):
         self.pixels = [
             [
@@ -117,14 +129,28 @@ class Bitmap(object):
         for x in range(self.height):
             for y in range(self.width):
                 f.write(self.pixels[x][y])
-        
+
         f.close()
-        
+
     def point(self, x, y, color = None):
       try:
         self.pixels[y][x] = color or self.current_color
       except:
         pass
+      
+##    def triangle(self,A,B,C,color=None,texture_coords=(),varying_normals=()):
+##      bbox_min,bbox_max = bbox(A,B,C)
+##      for x in range(bbox_min.x,bbox_max.x+1):
+##        for y in range(bbox_min.y,bbox_max.y+1):
+##          w,v,u = barycentric(A,B,C,V2(x,y))
+##          if w<0 or v<0 or u<0:
+##            continue
+##          color = self.shader(self,triangle=(A,B,C),bar=(w,v,u),varying_normals=varying_normals,texture_coords=texture_coords)
+##          z = A.z *w + B.z * v + C.z * u
+##          if x < len(self.zbuffer) and y < len(self.zbuffer[x]) and z > self.zbuffer[x][y]:
+##            self.point(x,y,color)
+##            self.zbuffer[x][y] = z
+
 
 #variables globales
 my_bitmap = Bitmap(0,0)
@@ -154,18 +180,18 @@ def estandarizary(entrada):
 
 #funciones gl
 def glInit():
- return   
+ return
 
 def glCreateWindow(width,height):
     global my_bitmap, bmp_width, bmp_height
-    
-    my_bitmap = Bitmap(width,height) 
+
+    my_bitmap = Bitmap(width,height)
     bmp_width = width
     bmp_height = height
 
 def glViewPort(x,y,width,height):
     global offestx, offsety, port_width, port_height
-    
+
     offsetx = x
     offsety = y
     port_width = width
@@ -173,12 +199,12 @@ def glViewPort(x,y,width,height):
 
 def glClear():
     global my_bitmap
-    
+
     my_bitmap.clear()
 
 def glClearColor(r,g,b):
     global bmp_color
-    
+
     bmp_color = color(round(255*r), round(255*g), round(255*b))
 
 def glVertex(x,y):
@@ -198,7 +224,7 @@ def glVertex(x,y):
 
 def glColor(r,g,b):
     global vertex_color
-    
+
     vertex_color = color(round(255*r), round(255*g), round(255*b))
 
 #linea
@@ -208,11 +234,11 @@ def frange(start,stop,step):
     while i < stop:
         yield i
         i += step
-        
+
 ##def glLine(x0,y0,x1,y1,step):
 ##    #step = diferencia en decimales/diferencia de enteros
 ##    global deltax,deltay,m
-##    
+##
 ##    deltax = round(abs(x1 - x0),2)
 ##    deltay = round(abs(y1 - y0),2)
 ##    #m = abs(deltay/deltax)
@@ -272,7 +298,7 @@ def glLineHigh(x0,y0,x1,y1,step):
             x = x + xi
             threshold = threshold - (2*dy)
         threshold = threshold + (2 * dx)
-    
+
 #def glLineBresenham(x0,y0,x1,y1,step):
 #    if abs(y1-y0) < abs(x1-x0):
 #        if x0 > x1:
@@ -320,7 +346,7 @@ def glLineHigh_norm(x0,y0,x1,y1):
             x = x + xi
             threshold = threshold - (2*dy)
         threshold = threshold + (2 * dx)
-    
+
 def glLineBresenham(x0,y0,x1,y1):
     if abs(y1-y0) < abs(x1-x0):
         if x0 > x1:
@@ -332,15 +358,15 @@ def glLineBresenham(x0,y0,x1,y1):
             glLineHigh_norm(x1,y1,x0,y0)
         else:
             glLineHigh_norm(x0,y0,x1,y1)
-            
-            
+
+
 
 #def triangle(A, B, C, color=None):
 #    if A.y > B.y:
 #      A, B = B, A
 #    if A.y > C.y:
 #      A, C = C, A
-#    if B.y > C.y: 
+#    if B.y > C.y:
 #      B, C = C, B
 #
 #    dx_ac = C.x - A.x
@@ -385,31 +411,45 @@ def glLineBresenham(x0,y0,x1,y1):
 #                y = estandarizary(y)
 #                glColor(1,0,0)
 #                glVertex(x, y)
-      
-def triangle(A, B, C, color=None,texture=None,texture_coords=(),intensity=1):
-    global my_bitmap
-    bbox_min, bbox_max = bbox(A, B, C)
-    for x in range(bbox_min.x, bbox_max.x + 1):
-      for y in range(bbox_min.y, bbox_max.y + 1):
-        w, v, u = barycentric(A, B, C, V2(x, y))
-        if w < 0 or v < 0 or u < 0: 
-          continue
 
-        if texture:
-          tA,tB,tC = texture_coords
-          tx = tA.x * w + tB.x * v +tC.x * u
-          ty = tA.y * w + tB.y * v +tC.y * u
-          color = texture.get_color(tx,ty,intensity)
-          
-        z = A.z * w + B.z * v + C.z * u
-        if x < 0 or y < 0:
-          continue
-        if x<len(my_bitmap.zbuffer) and y<len(my_bitmap.zbuffer[x]) and z> my_bitmap.zbuffer[x][y]:
-            #print(color)
-            xs = estandarizarx(x)
-            ys = estandarizary(y)
-            my_bitmap.point(x, y,color)
-            my_bitmap.zbuffer[x][y] = z
+##def triangle(A, B, C, color=None,texture=None,texture_coords=(),intensity=1):
+##    global my_bitmap
+##    bbox_min, bbox_max = bbox(A, B, C)
+##    for x in range(bbox_min.x, bbox_max.x + 1):
+##      for y in range(bbox_min.y, bbox_max.y + 1):
+##        w, v, u = barycentric(A, B, C, V2(x, y))
+##        if w < 0 or v < 0 or u < 0:
+##          continue
+##
+##        if texture:
+##          tA,tB,tC = texture_coords
+##          tx = tA.x * w + tB.x * v +tC.x * u
+##          ty = tA.y * w + tB.y * v +tC.y * u
+##          color = texture.get_color(tx,ty,intensity)
+##
+##        z = A.z * w + B.z * v + C.z * u
+##        if x < 0 or y < 0:
+##          continue
+##        if x<len(my_bitmap.zbuffer) and y<len(my_bitmap.zbuffer[x]) and z> my_bitmap.zbuffer[x][y]:
+##            #print(color)
+##            xs = estandarizarx(x)
+##            ys = estandarizary(y)
+##            my_bitmap.point(x, y,color)
+##            my_bitmap.zbuffer[x][y] = z
+
+def triangle(A,B,C,color=None,texture_coords=(),varying_normals=()):
+  global my_bitmap
+  bbox_min,bbox_max = bbox(A,B,C)
+  for x in range(bbox_min.x,bbox_max.x+1):
+    for y in range(bbox_min.y,bbox_max.y+1):
+      w,v,u = barycentric(A,B,C,V2(x,y))
+      if w<0 or v<0 or u<0:
+        continue
+      color = my_bitmap.shader(my_bitmap,triangle=(A,B,C),bar=(w,v,u),varying_normals=varying_normals,texture_coords=texture_coords)
+      z = A.z *w + B.z * v + C.z * u
+      if x < len(my_bitmap.zbuffer) and y < len(my_bitmap.zbuffer[x]) and z > my_bitmap.zbuffer[x][y]:
+        my_bitmap.point(x,y,color)
+        my_bitmap.zbuffer[x][y] = z
 
 def glTransform(vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
 
@@ -420,80 +460,66 @@ def glTransform(vertex, translate=(0, 0, 0), scale=(1, 1, 1)):
     )
 
 #obj
-def glLoad(filename,translate=(0,0,0),scale=(1,1,1),texture=None):
+def glLoad(filename,translate=(0,0,0),scale=(1,1,1),texture=None,shader=None,normalmap=None):
     #print(texture)
     global my_bitmap
     model = Obj(filename)
-    light = V3(0,0,1)
+    my_bitmap.light = V3(0,0,1)
+    my_bitmap.texture = texture
+    my_bitmap.shader = shader
+    my_bitmap.normalmap = normalmap
+
     for face in model.vfaces:
         vcount = len(face)
         if vcount == 3:
-            f1 = face[0][0] - 1
-            f2 = face[1][0] - 1
-            f3 = face[2][0] - 1
+          f1 = face[0][0] - 1
+          f2 = face[1][0] - 1
+          f3 = face[2][0] - 1
 
-            a = glTransform(model.vertices[f1], translate, scale)
-            b = glTransform(model.vertices[f2], translate, scale)
-            c = glTransform(model.vertices[f3], translate, scale)
+          a = glTransform(model.vertices[f1], translate, scale)
+          b = glTransform(model.vertices[f2], translate, scale)
+          c = glTransform(model.vertices[f3], translate, scale)
 
-            normal = norm(cross(sub(b, a), sub(c, a)))
-            intensity = dot(normal, light)
-            if not texture:
-              grey = round(255 * intensity)
-              if grey < 0:
-                  continue  
-              triangle(a, b, c, color=color(grey, grey, grey))
-            else:
-              t1 = face[0][1]-1
-              t2 = face[1][1]-1
-              t3 = face[2][1]-1
-              
-              tA = V3(*model.tvertices[t1])
-              tB = V3(*model.tvertices[t2])
-              tC = V3(*model.tvertices[t3])
-              triangle(a,b,c,texture=texture,texture_coords=(tA,tB,tC),intensity=intensity)
+          n1 = face[0][2] - 1
+          n2 = face[1][2] - 1
+          n3 = face[2][2] - 1
+          nA = V3(*model.normals[n1])
+          nB = V3(*model.normals[n2])
+          nC = V3(*model.normals[n3])
+
+          t1 = face[0][1] - 1
+          t2 = face[1][1] - 1
+          t3 = face[2][1] - 1
+
+          tA = V3(*model.tvertices[t1])
+          tB = V3(*model.tvertices[t2])
+          tC = V3(*model.tvertices[t3])
+  
+          triangle(a,b,c,texture_coords=(tA,tB,tC),varying_normals=(nA,nB,nC))
         else:
-            f1 = face[0][0] - 1
-            #print(f1)
-            f2 = face[1][0] - 1
-            #print(f2)
-            f3 = face[2][0] - 1
-            #print(f3)
-            f4 = face[3][0] - 1   
-            #print(f4)
-            #print(model.vertices[f1])
-            vertices = [
-                glTransform(model.vertices[f1], translate, scale),
-                glTransform(model.vertices[f2], translate, scale),
-                glTransform(model.vertices[f3], translate, scale),
-                glTransform(model.vertices[f4], translate, scale)
+          f1 = face[0][0] - 1
+          f2 = face[1][0] - 1
+          f3 = face[2][0] - 1
+          f4 = face[3][0] - 1
+
+          vertices = [
+            glTransform(model.vertices[f1],translate,scale),
+            glTransform(model.vertices[f2],translate,scale),
+            glTransform(model.vertices[f3],translate,scale),
+            glTransform(model.vertices[f4],translate,scale)
             ]
 
-            normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))  
-            
-            intensity = dot(normal, light)
-            grey = round(255 * intensity)
-            A, B, C, D = vertices
-            if not texture:
-              grey = round(255 * intensity)
-              if grey < 0:
-                continue 
-              triangle(A, B, C, color(grey, grey, grey))
-              triangle(A, C, D, color(grey, grey, grey))
-            else:
-              t1 = face[0][1]-1
+          normal = norm(cross(sub(vertices[0], vertices[1]), sub(vertices[1], vertices[2])))
+          intensity = dot(normal,my_bitmap.light)
+          grey = round(255 * intensity)
+          if grey < 0:
+            continue
+
+          A,B,C,D = vertices
+          #if not texture:
+          triangle(A, B, C, color(grey, grey, grey))
+          triangle(A, C, D, color(grey, grey, grey))
               
-              t2 = face[1][1]-1
-              t3 = face[2][1]-1
-              t4 = face[3][1]-1
-              tA = V3(*model.tvertices[t1])
-              tB = V3(*model.tvertices[t2])
-              tC = V3(*model.tvertices[t3])
-              tD = V3(*model.tvertices[t4])
-              triangle(A,B,C,texture=texture,texture_coords=(tA,tB,tC,),intensity=intensity)
-              triangle(A,C,D,texture=texture,texture_coords=(tA,tC,tD,),intensity=intensity)
-
-
 def glLoadOld(filename,translate=(0,0),scale=(1,1)):
     global my_bitmap
     model = Obj(filename)
@@ -520,7 +546,7 @@ def glLoadOld(filename,translate=(0,0),scale=(1,1)):
             #print(x1,x2,y1,y2)
 
             glLine(x1,y1,x2,y2,0.004)
-    
+
 def glFinish(name):
     global my_bitmap
     my_bitmap.write(str(name)+".bmp")
@@ -538,10 +564,10 @@ def flood_fill(x,y,maxx,maxy,initial_color,minx,miny):
     return
   else:
     glVertex(xs,ys)
-    flood_fill(x + 1, y,maxx,maxy,initial_color,minx,miny) 
-    flood_fill(x - 1, y,maxx,maxy,initial_color,minx,miny) 
-    flood_fill(x, y + 1,maxx,maxy,initial_color,minx,miny) 
-    flood_fill(x, y - 1,maxx,maxy,initial_color,minx,miny) 
+    flood_fill(x + 1, y,maxx,maxy,initial_color,minx,miny)
+    flood_fill(x - 1, y,maxx,maxy,initial_color,minx,miny)
+    flood_fill(x, y + 1,maxx,maxy,initial_color,minx,miny)
+    flood_fill(x, y - 1,maxx,maxy,initial_color,minx,miny)
 
 def bucketfill(x,y,maxx,maxy):
   x1 = x
@@ -555,7 +581,7 @@ def bucketfill(x,y,maxx,maxy):
       else:
         x1 = resetx
     y1 += 0.004
-  
+
 def fill(self, x, y, color):
         self.validate(x, y, color)
 
@@ -597,4 +623,4 @@ def fill(self, x, y, color):
                     below = False
 
                 x1 += 1
-    
+
